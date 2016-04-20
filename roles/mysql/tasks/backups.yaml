@@ -1,0 +1,23 @@
+- block:
+  - name: Set up backup volume mount point
+    file:
+      path: /srv/backups
+      state: directory
+
+  - name: Backup cron job
+    cron:
+      name: mysql_backup
+      minute: "{{ mysql_backup_minute }}"
+      hour: "{{ mysql_backup_hour }}"
+      job: "echo backup >>/var/log/mysql_backup.log 2>&1"
+    when: mysql_backup_hour|default('') != '' and mysql_backup_minute|default('') != ''
+
+  when: mysql_backup_nfs_src|default('') != ''
+
+- block:
+  - name: Disable backup cron job
+    cron:
+      name: mysql_backup
+      state: absent
+
+  when: (mysql_backup_hour|default('') == '' and mysql_backup_minute|default('') == '') or mysql_backup_nfs_src|default('') == ''

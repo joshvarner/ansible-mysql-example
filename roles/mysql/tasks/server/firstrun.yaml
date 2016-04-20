@@ -1,0 +1,53 @@
+- stat:
+    path: "{{ mysql_data_dir }}/mysql"
+  register: mysql_dir_result
+
+- fail:
+    msg: "Refusing to run, mysql data directory exists, non-empty"
+  when: mysql_dir_result.stat.exists != False
+
+- name: 'Stop mysqld'
+  shell: 'killall -q mysqld || /bin/true'
+
+- name: 'Remove /var/run/mysqld'
+  file:
+    path: /var/run/mysqld
+    state: absent
+
+- name: 'Run mysql_install_db'
+  command: "/usr/bin/mysql_install_db"
+  when: mysql_version != 5.7
+
+- name: first_run.sql
+  template:
+    src: secrets/first_run.sql.j2
+    dest: /tmp/first_run.sql
+    owner: root
+    group: root
+    mode: 0400
+
+- name: 'Run mysqld --initialize-insecure'
+  command: "/usr/sbin/mysqld --initialize-insecure --init-file=/tmp/first_run.sql"
+  when: mysql_version == 5.7
+
+- name: 'Fix mysql data directory permissions'
+  file:
+    path: "{{ mysql_base_dir }}"
+    owner: mysql
+    group: mysql
+    recurse: yes
+
+- name: 'Starting MySQL'
+  service:
+    name: mysql
+    state: started
+  ignore_errors: yes
+
+- name: 'Execute first_run.sql'
+  shell: '/usr/bin/mysql -h 127.0.0.1 < /tmp/first_run.sql'
+  when: mysql_version != 5.7
+
+- name: 'Remove first_run.sql'
+  file:
+    path: /tmp/first_run.sql
+    state: absent

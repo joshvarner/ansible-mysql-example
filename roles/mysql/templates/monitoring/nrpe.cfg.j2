@@ -1,0 +1,24 @@
+log_facility=daemon
+pid_file={{ mysql_nrpe_run_dir }}/nrpe.pid
+server_port=5666
+nrpe_user=nagios
+nrpe_group=nagios
+
+allowed_hosts=127.0.0.1
+
+dont_blame_nrpe=0
+
+debug=0
+command_timeout=60
+connection_timeout=300
+
+command[check_users]={{ mysql_nagios_plugins_dir }}/check_users -w 15 -c 20
+command[check_load]={{ mysql_nagios_plugins_dir }}/check_load -w 16,14,12 -c 20,18,16
+command[check_disk]={{ mysql_nagios_plugins_dir }}/check_disk -w 10% -c 3% -p /
+command[check_disk_root]={{ mysql_nagios_plugins_dir }}/check_disk -w 10% -c 3% -p /
+command[check_disk_local]={{ mysql_nagios_plugins_dir }}/check_disk -w 10% -c 3% -p {{ mysql_base_dir }}
+command[check_disk_data]={{ mysql_nagios_plugins_dir }}/check_disk -w 10% -c 3% -p {{ mysql_base_dir }}
+command[check_zombie_procs]={{ mysql_nagios_plugins_dir }}/check_procs -w 15 -c 50 -s Z
+command[check_total_procs]={{ mysql_nagios_plugins_dir }}/check_procs -w 1000 -c 1500
+command[check_swap]={{ mysql_nagios_plugins_dir }}/check_swap -w 55% -c 40%
+command[check_sshd]={{ mysql_nagios_plugins_dir }}/check_procs -w 1:0 -c 1:0 -C sshd

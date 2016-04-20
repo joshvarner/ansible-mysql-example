@@ -1,0 +1,12 @@
+- include: base.yaml
+  tags: always
+
+- include: server.yaml
+  tags: server
+
+- include: backups.yaml
+  tags: backups
+
+- include: monitoring.yaml
+  when: mysql_monitored == 1
+  tags: monitoring

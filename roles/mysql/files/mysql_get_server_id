@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+"""
+Return the integer version of the first non-loopback IP address on the host to use as a MySQL 
+server id
+"""
+import subprocess
+
+p = subprocess.Popen("hostname -I | sed 's/ /\\n/g' | grep -P '^\\d+\\.'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+results = p.communicate()[0].strip().split("\n")
+results.sort()
+o = [int(x) for x in results[0].split('.')]
+server_id = (o[0] << 24) | (o[1] << 16) | (o[2] << 8) | o[3]
+print server_id

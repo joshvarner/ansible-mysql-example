@@ -1,0 +1,115 @@
+- name: mysql_get_server_id
+  copy:
+    src: mysql_get_server_id
+    dest: /usr/local/bin/mysql_get_server_id
+    mode: 0755
+    owner: root
+    group: root
+
+- command: /usr/local/bin/mysql_get_server_id
+  register: mysql_server_id_results
+  changed_when: false
+
+- set_fact:
+    mysql_server_id: '{{ mysql_server_id_results.stdout }}'
+    mysql_data_dir: '{{ mysql_base_dir }}/data'
+    mysql_logs_dir: '{{ mysql_base_dir }}/logs'
+    mysql_tmp_dir: '{{ mysql_base_dir }}/tmp'
+    mysql_innodb_buffer_pool_size_mb: "{{ mysql_innodb_buffer_pool_size_mb|default((ansible_memtotal_mb * 0.75) | int) }}"
+    mysql_expire_logs_days: "{{ mysql_expire_logs_days|default(14) }}"
+
+- assert: { that: "mysql_server_id > 0" }
+    
+- name: Set up mount point
+  file:
+    path: /data
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Checking disk config
+  fail:
+    msg: "Refusing to run, disk device not specified and not a vagrant VM"
+  when: mysql_disk_device|default('') == '' and mysql_is_vagrant|default(0) != 1
+
+- block:
+  - name: Set up data PV
+    lvg:
+      vg: vg_data
+      pvs: "{{ mysql_disk_device }}"
+      pesize: 32
+
+  - name: Set up data LV
+    lvol:
+      vg: vg_data
+      lv: lv_data
+      size: 90%FREE
+
+  - name: Set up data FS
+    filesystem:
+      fstype: xfs
+      dev: /dev/vg_data/lv_data
+      opts: "-L dbdata"
+
+  - name: Add data FS to fstab
+    mount:
+      name: /data
+      src: 'LABEL=dbdata'
+      fstype: xfs
+      state: mounted
+      opts: "defaults,nobarrier"
+
+  when: mysql_disk_device|default('') != ''
+
+- name: install percona apt key
+  apt_key:
+    url: "http://www.percona.com/downloads/RPM-GPG-KEY-percona"
+    state: present
+
+- name: install percona apt preferences
+  copy:
+    src: etc_apt_preferences.d_00percona.pref
+    dest: /etc/apt/preferences.d/00percona.pref
+    owner: root
+    group: root
+    mode: 0644
+
+- include: server/mysql56.yaml
+  name: 'MySQL 5.6 specific configs'
+  when: mysql_version == 5.6
+- include: server/mysql57.yaml
+  name: 'MySQL 5.7 specific configs'
+  when: mysql_version == 5.7
+
+- name: install percona-toolkit
+  apt:
+    pkg: percona-toolkit
+    state: present
+
+- name: install python-mysqldb
+  apt:
+    pkg: python-mysqldb
+    state: present
+
+- name: set up mysql directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: mysql
+    group: mysql
+    mode: 0755
+  with_items:
+    - "{{ mysql_base_dir }}"
+    - "{{ mysql_data_dir }}"
+    - "{{ mysql_logs_dir }}"
+    - "{{ mysql_tmp_dir }}"
+
+- name: Checking for MySQL data files
+  when: mysql_first_run|default(1) == 1
+  stat:
+    path: "{{ mysql_data_dir }}/mysql"
+  register: mysql_dir_result
+
+- include: server/firstrun.yaml
+  when: mysql_first_run|default(1) == 1 and mysql_dir_result.stat.exists != True

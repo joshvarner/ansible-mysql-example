@@ -1,0 +1,27 @@
+- name: Set system hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+  when: not inventory_hostname|match("^\d+\.\d+\.\d+\.\d+$")
+
+- name: "Set swappiness to 0"
+  sysctl:
+    name: vm.swappiness
+    value: 0
+    state: present
+    reload: yes
+
+- name: "Create sudoers.d directory"
+  file:
+    path: /etc/sudoers.d
+    owner: root
+    group: root
+    mode: 0750
+    state: directory
+
+- name: Set includedir in sudoers
+  lineinfile:
+    dest: /etc/sudoers
+    line: "#includedir /etc/sudoers.d"
+    state: present
+    validate: "/usr/sbin/visudo -cf %s"
+

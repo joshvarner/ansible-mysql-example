@@ -1,0 +1,51 @@
+[mysqld]
+read-only                      = {{ mysql_read_only|default(0) }}
+datadir                        = {{ mysql_data_dir }}
+tmpdir                         = {{ mysql_tmp_dir }}
+pid-file                       = {{ mysql_logs_dir }}/mysqld.pid 
+socket                         = /tmp/mysql.sock
+skip-name-resolve		
+character-set-server           = utf8
+collation-server               = utf8_general_ci
+
+general-log                    = 0
+
+query-cache-type               = 0
+query-cache-size               = 0
+
+interactive-timeout            = 28800
+wait-timeout                   = 600
+
+innodb-log-group-home-dir      = {{ mysql_data_dir }}
+innodb-data-home-dir           = {{ mysql_data_dir }}
+innodb-data-file-path          = ibdata1:512M:autoextend
+innodb-buffer-pool-size        = {{ mysql_innodb_buffer_pool_size_mb | int }}M
+innodb-file-format             = Barracuda
+
+server-id                      = {{ mysql_server_id }}
+log-bin                        = {{ mysql_logs_dir }}/mysql-bin
+expire-logs-days               = {{ mysql_expire_logs_days }}
+max-binlog-size                = 512M
+relay-log                      = {{ mysql_logs_dir }}/mysql-relay-bin
+relay-log-index                = {{ mysql_logs_dir }}/mysql-relay-bin
+sync-binlog                    = 1
+log-slave-updates              = 1
+binlog-format                  = ROW 
+{% if mysql_gtid_enabled|default(0) %}
+enforce-gtid-consistency       = 1
+gtid-mode                      = ON
+master-info-repository         = table
+relay-log-info-repository      = table
+{% endif %}
+
+skip-slave-start               = 1
+
+slow-query-log                 = 1
+slow-query-log-file            = {{ mysql_logs_dir }}/mysql-slow.log
+long-query-time                = 2
+
+[mysqld_safe]
+log-error                      = {{ mysql_logs_dir }}/mysql-error.log
+
+[client]
+socket                         = /tmp/mysql.sock

@@ -1,0 +1,40 @@
+- name: install percona apt repo
+  apt_repository:
+    repo: 'deb http://repo.percona.com/apt trusty main'
+    state: present
+    update_cache: yes
+
+- name: install percona packages
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+    cache_valid_time: 86400
+  with_items:
+    - percona-server-common-5.6
+    - percona-server-client-5.6
+    - percona-server-server-5.6
+
+- name: install custom mysql init script
+  copy:
+    src: etc_init.d_mysql
+    dest: /etc/init.d/mysql
+    mode: 0755
+    owner: root
+    group: root
+
+- name: install debian-start file
+  copy:
+    src: etc_mysql_debian-start
+    dest: /etc/mysql/debian-start
+    owner: root
+    group: root
+    mode: 0755
+
+- name: install my.cnf
+  template:
+    src: 5.6/my.cnf.j2
+    dest: /etc/mysql/my.cnf
+    mode: 0644
+    owner: root
+    group: root

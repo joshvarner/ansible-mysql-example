@@ -1,0 +1,35 @@
+- name: install nagios monitoring packages for Ubuntu
+  apt:
+    name: "{{ item }}"
+    state: present
+  when: ansible_pkg_mgr == 'apt'
+  with_items:
+    - percona-nagios-plugins
+    - nagios-nrpe-server
+    - nagios-plugins
+    - nagios-plugins-common
+    - nagios-plugins-basic
+    - nagios-plugins-standard
+
+- name: Set up nrpe run dir
+  file:
+    path: '/var/run/nagios'
+    state: directory
+    owner: nagios
+    group: nagios
+    mode: 0755
+
+- name: monitoring nrpe.cfg
+  template:
+    src: monitoring/nrpe.cfg.j2
+    dest: /etc/nagios/nrpe.cfg
+    owner: nagios
+    group: nagios
+    mode: 0644
+  register: mysql_nrpe_conf
+
+- service:
+    name: nagios-nrpe-server
+    state: restarted
+    enabled: yes
+  when: ansible_pkg_mgr == 'apt' and mysql_nrpe_conf.changed

@@ -1,0 +1,4 @@
+---
+ansible_become: 1
+mysql_ssh_keys: 
+  someuser: "ssh-rsa somekeygoeshere"
